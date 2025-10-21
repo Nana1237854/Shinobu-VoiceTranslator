@@ -8,7 +8,11 @@ from qfluentwidgets import FluentIcon as FIF
 
 
 from .setting_interface import SettingInterface
+from .home_interface import HomeInterface
 from .download_interface import DownloadInterface
+from .transcribe_interface import TranscribeInterface
+from .translate_interface import TranslateInterface
+from .othertools_interface import OtherToolsInterface
 from .task_interface import TaskInterface
 
 
@@ -25,8 +29,11 @@ class MainWindow(MSFluentWindow):
         self.initWindow()
 
         # TODO: create sub interface
-        # self.homeInterface = HomeInterface(self)
+        self.homeInterface = HomeInterface(self)
         self.downloadInterface = DownloadInterface(self)
+        self.transcribeInterface = TranscribeInterface(self)
+        self.translateInterface = TranslateInterface(self)
+        self.otherToolsInterface = OtherToolsInterface(self)
         self.settingInterface = SettingInterface(self)
         self.taskInterface = TaskInterface(self)
 
@@ -46,9 +53,23 @@ class MainWindow(MSFluentWindow):
 
         # add custom widget to bottom
         self.addSubInterface(
-            self.downloadInterface, FIF.DOWNLOAD, self.tr('下载设置'), isTransparent=True)
+            self.homeInterface, FIF.HOME, self.tr('主页'), isTransparent=True)
+        
+        self.addSubInterface(
+            self.downloadInterface, FIF.DOWNLOAD, self.tr('下载模式'), isTransparent=True)
+        
+        self.addSubInterface(
+            self.transcribeInterface, Icon.HEADPHONE, self.tr('听写模式'), isTransparent=True)
+        
+        self.addSubInterface(
+            self.translateInterface, Icon.LANGUAGE, self.tr('翻译模式'), isTransparent=True)
+
+        self.addSubInterface(
+            self.otherToolsInterface, Icon.TOOLS, self.tr('其他工具'), isTransparent=True)
+
         self.addSubInterface(
             self.taskInterface, Icon.TASK, self.tr('任务设置'), Icon.CLOUD_DOWNLOAD, NavigationItemPosition.BOTTOM)
+        
         self.addSubInterface(
             self.settingInterface, Icon.SETTINGS, self.tr('Settings'), Icon.SETTINGS_FILLED, NavigationItemPosition.BOTTOM)
         

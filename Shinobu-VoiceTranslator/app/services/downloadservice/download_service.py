@@ -62,12 +62,6 @@ class UnifiedDownloadService(BaseDownloadService):
             self.bilibili_service.cancel(task)
         elif task.source == "youtube":
             self.youtube_service.cancel(task)
-    
-    def cleanup(self):
-        """清理所有子服务的工作线程"""
-        self.bilibili_service.cleanup()
-        self.youtube_service.cleanup()
-        super().cleanup()
 
 
 # 全局服务实例

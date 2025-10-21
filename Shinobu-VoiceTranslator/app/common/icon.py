@@ -16,6 +16,9 @@ class Icon(FluentIconBase, Enum):
     TASK = "Task"
     CLOUD_DOWNLOAD = "CloudDownload"
     SELECT = "Select"
+    HEADPHONE = "Headphone"
+    LANGUAGE = "Language"
+    TOOLS = "Tools"
 
     def path(self, theme=Theme.AUTO):
         # 自定义SVG图标
@@ -27,6 +30,9 @@ class Icon(FluentIconBase, Enum):
             "Task": FluentIcon.CHECKBOX,
             "CloudDownload": FluentIcon.CLOUD_DOWNLOAD,
             "Select": FluentIcon.ACCEPT,
+            "Headphone": FluentIcon.HEADPHONE,
+            "Language": FluentIcon.LANGUAGE,
+            "Tools": FluentIcon.ADD_TO,
         }
         
         if self.value in icon_map:

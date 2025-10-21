@@ -8,6 +8,7 @@ from ..components.config_card import DownloadConfigCard
 
 from ..common.signal_bus import signalBus
 
+from ..components.info_card import DownloadModeInfoCard
 from ..services.downloadservice.download_service import UnifiedDownloadService
 
 
@@ -16,12 +17,13 @@ class DownloadInterface(ScrollArea):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("downloadInterface")
+        
         
         self.view = QWidget(self)
         self.loadProgressInfoBar = None
         self.installProgressInfoBar = None
 
+        self.downloadModeInfoCard = DownloadModeInfoCard(self)
         self.downloadConfigCard = DownloadConfigCard(self)
 
         self.vBoxLayout = QVBoxLayout(self.view)
@@ -38,7 +40,13 @@ class DownloadInterface(ScrollArea):
         self.vBoxLayout.setContentsMargins(0, 0, 10, 10)
         self.vBoxLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.vBoxLayout.addWidget(
+            self.downloadModeInfoCard, 0, Qt.AlignmentFlag.AlignTop)
+        self.vBoxLayout.addWidget(
             self.downloadConfigCard, 0, Qt.AlignmentFlag.AlignTop)
+        
+        self.resize(780, 800)
+        self.setObjectName("downloadInterface")
+        self.enableTransparentBackground()
 
         self._connectSignalToSlot()
 
