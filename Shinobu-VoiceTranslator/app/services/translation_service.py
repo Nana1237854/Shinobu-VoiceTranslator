@@ -6,10 +6,11 @@ from PySide6.QtCore import QObject, Signal
 
 from ..common.database.entity.task import Task, TaskStatus
 from ..common.database import getTaskService
+from .base_service import BaseService
 from ..common.signal_bus import signalBus
 
 
-class TranslationService(QObject):
+class TranslationService(BaseService):
     """翻译服务基类 - 占位"""
     
     taskCreated = Signal(Task)   # 任务创建信号
@@ -19,10 +20,6 @@ class TranslationService(QObject):
     
     def __init__(self):
         super().__init__()
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.db = getTaskService()
-        self._available = False  # 服务暂不可用
-        self.log_cache = []
     
     def isAvailable(self) -> bool:
         """检查服务是否可用"""
@@ -37,24 +34,6 @@ class TranslationService(QObject):
         """开始任务 - 待实现"""
         self._addLog("WARNING", "翻译服务尚未实现")
         return False
-    
-    def restart(self, task: Task) -> bool:
-        """重启任务 - 待实现"""
-        return self.start(task)
-    
-    def cancel(self, task: Task) -> bool:
-        """取消任务 - 待实现"""
-        return False
-    
-    def showLog(self):
-        """显示日志"""
-        signalBus.switchToTaskInterfaceSig.emit()
-    
-    def _addLog(self, level: str, message: str):
-        """添加日志"""
-        self.log_cache.append((level, message))
-        self.logger.log(getattr(logging, level.upper(), logging.INFO), message)
-        signalBus.logGenerated.emit(level, message)
 
 
 # 全局服务实例
