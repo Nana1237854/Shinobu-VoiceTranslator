@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 from PySide6.QtCore import QObject, Signal
 
-from ..common.database.entity.task import Task, TaskStatus
+from ..common.database.entity.task import Task, TaskStatus, TaskType
 from ..common.database import getTaskService
 from .base_service import BaseService
 from ..common.signal_bus import signalBus
@@ -19,7 +19,7 @@ class TranscriptionService(BaseService):
     logGenerated = Signal(str, str)   # 日志生成信号
     
     def __init__(self):
-        super().__init__()
+        super().__init__(TaskType.TRANSCRIBE)  # 修改：传递 TaskType.TRANSCRIBE
     
     def isAvailable(self) -> bool:
         """检查服务是否可用"""
@@ -34,7 +34,6 @@ class TranscriptionService(BaseService):
         """开始任务 - 待实现"""
         self._addLog("WARNING", "听写服务尚未实现")
         return False
-    
     
 
 

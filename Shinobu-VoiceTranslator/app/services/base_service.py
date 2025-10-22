@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
 import logging
 from pathlib import Path
 from typing import Optional, Callable
@@ -9,8 +9,20 @@ from ..common.database.entity.task import Task, TaskStatus, TaskType
 from ..common.database import getTaskService
 from ..common.signal_bus import signalBus
 
-class BaseService(QObject, ABC):
+# 创建组合元类，解决 QObject 和 ABC 的元类冲突
+class QABCMeta(type(QObject), ABCMeta):
+    """组合 QObject 的元类和 ABCMeta"""
+    pass
+
+class BaseService(QObject, ABC, metaclass=QABCMeta):
     """服务基类"""
+    
+    # 定义信号
+    logGenerated = Signal(str, str)  # level, message
+    taskCreated = Signal(Task)
+    taskUpdated = Signal(Task)
+    taskFinished = Signal(Task, bool, str)  # task, success, error_msg
+    
     def __init__(self, service_type: TaskType):
         super().__init__()
         self.service_type = service_type
