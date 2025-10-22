@@ -52,6 +52,15 @@ class DownloadInterface(ScrollArea):
 
     # 下载按钮点击事件
     def _onDownloadButtonClicked(self):
+        if not UnifiedDownloadService.isAvailable():
+            InfoBar.error(
+                self.tr("服务不可用"),
+                self.tr("下载服务当前不可用，请检查网络或配置"),
+                duration=3000,
+                position=InfoBarPosition.TOP,
+                parent=self
+            )
+            return
         url = self.downloadConfigCard.urlLineEdit.text().strip()
         if not url:
             InfoBar.warning(

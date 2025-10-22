@@ -2,7 +2,7 @@
 from typing import Optional
 from .bilibili_service import BilibiliService
 from .youtube_service import YouTubeService
-from .base_service import BaseDownloadService
+from .base_download_service import BaseDownloadService
 from ...common.database import sqlRequest
 from ...common.database.entity import Task
 from ...common.utils import removeFile, showInFolder

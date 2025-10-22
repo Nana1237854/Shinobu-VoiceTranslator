@@ -45,9 +45,12 @@ class HomeInterface(ScrollArea):
 
         self._connectSignalToSlot()
 
+    def _onRunButtonClicked(self):
+        pass
+
     # 连接信号与槽
     def _connectSignalToSlot(self):
-        pass
+        self.runButton.clicked.connect(self._onRunButtonClicked)
 
     # 拖拽事件
     def dragEnterEvent(self, a0):
