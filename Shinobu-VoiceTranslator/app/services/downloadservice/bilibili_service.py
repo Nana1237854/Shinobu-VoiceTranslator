@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from .base_service import BaseDownloadService, DownloadWorker
+from .base_download_service import BaseDownloadService, DownloadWorker
 from ...common.database.entity.task import Task, TaskStatus, TaskType
 from ...common.config import cfg
 
