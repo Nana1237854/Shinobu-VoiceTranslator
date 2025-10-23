@@ -445,14 +445,42 @@ class LogTaskView(QWidget):
         self.clearButton.clicked.connect(self.logContent.clear)
         signalBus.logGenerated.connect(self.addLog)
 
-    def addLog(self, level: str, message: str):
-        """向日志视图添加一条格式化的日志"""
+    def addLog(self, service_type=None, level: str = None, message: str = None):
+        """向日志视图添加一条格式化的日志
+        
+        Args:
+            service_type: 服务类型（TaskType 枚举），可选
+            level: 日志级别（INFO, WARNING, ERROR 等）
+            message: 日志消息
+        
+        Note:
+            支持两种调用方式：
+            1. addLog(service_type, level, message) - 从信号连接调用（3参数）
+            2. addLog(level, message) - 直接调用（2参数）
+        """
         from PySide6.QtCore import QDateTime
+        
+        # 处理参数兼容性：检测是2参数还是3参数调用
+        if message is None and level is not None:
+            # 两参数调用：addLog(level, message)
+            message = level
+            level = service_type
+            service_type = None
+        
         time_str = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-        formatted_message = f"[{time_str}] [{level.upper()}]: {message}"
+        
+        # 获取服务类型名称（如果提供）
+        if service_type and hasattr(service_type, 'value'):
+            service_name = service_type.value.upper()
+            formatted_message = f"[{time_str}] [{service_name}] [{level.upper()}]: {message}"
+        else:
+            formatted_message = f"[{time_str}] [{level.upper()}]: {message}"
+        
         self.logContent.appendPlainText(formatted_message)
         # 滚动到底部
-        self.logContent.verticalScrollBar().setValue(self.logContent.verticalScrollBar().maximum())
+        self.logContent.verticalScrollBar().setValue(
+            self.logContent.verticalScrollBar().maximum()
+        )
 
         
     

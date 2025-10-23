@@ -50,7 +50,7 @@ class DownloadConfigCard(GroupHeaderCardWidget):
         self.addGroup(
             icon=FluentIcon.FOLDER,  # 文件夹图标
             title=self.tr("保存目录"),
-            content=self.tr("点击选择保存目录"),
+            content=cfg.get(cfg.saveFolder),
             widget=self.saveFolderButton
         )
         
@@ -130,7 +130,7 @@ class TranslateConfigCard(GroupHeaderCardWidget):
         self.addGroup(
             icon=FluentIcon.FOLDER,
             title=self.tr("保存目录"),
-            content=self.tr("点击选择保存目录"),
+            content=cfg.get(cfg.saveFolder),
             widget=self.saveFolderButton
         )
         
@@ -219,7 +219,7 @@ class TranscribeConfigCard(GroupHeaderCardWidget):
         self.addGroup(
             icon=FluentIcon.FOLDER,
             title=self.tr("保存目录"),
-            content=self.tr("点击选择保存目录"),
+            content=cfg.get(cfg.saveFolder),
             widget=self.saveFolderButton
         )
         
@@ -237,6 +237,8 @@ class TranscribeConfigCard(GroupHeaderCardWidget):
         self.toolBarLayout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self.vBoxLayout.addLayout(self.toolBarLayout)
+
+    
 
 class AudioSeparationConfigCard(GroupHeaderCardWidget):
     """人声分离配置卡片"""
@@ -285,7 +287,7 @@ class AudioSeparationConfigCard(GroupHeaderCardWidget):
         self.addGroup(
             icon=FluentIcon.FOLDER,  # 文件夹图标
             title=self.tr("保存目录"),
-            content=self.tr("点击选择保存目录"),
+            content=cfg.get(cfg.saveFolder),
             widget=self.saveFolderButton
         )
 
@@ -368,7 +370,7 @@ class ClipSectionConfigCard(GroupHeaderCardWidget):
         self.addGroup(
             icon=FluentIcon.FOLDER,  # 文件夹图标
             title=self.tr("保存目录"),
-            content=self.tr("点击选择保存目录"),
+            content=cfg.get(cfg.saveFolder),
             widget=self.saveFolderButton
         )
 
@@ -518,7 +520,7 @@ class CompleteConfigCard(GroupHeaderCardWidget):
         self.addGroup(
             icon=FluentIcon.FOLDER,  # 文件夹图标
             title=self.tr("保存目录"),
-            content=self.tr("点击选择保存目录"),
+            content=cfg.get(cfg.saveFolder),
             widget=self.saveFolderButton
         )
 

@@ -29,7 +29,7 @@ class TaskCardBase(CardWidget):
         self.checkBox.setFixedSize(23, 23)
         self.setSelectionMode(False)
 
-        self.checkBox.stateChanged.connect(self._onCheckedChanged)
+        self.checkBox.stateChanged.connect(self._onCheckChanged)
 
     def setSelectionMode(self, enter: bool):
         # 选择模式切换
@@ -96,12 +96,11 @@ class ProgressingTaskCard(TaskCardBase):
         # 核心显示控件
         self.task = task                                        # 绑定的任务对象
         self.imageLabel = ImageLabel()                          # 文件类型图标
-        self.flieNameLabel = BodyLabel(task.flieName)           # 文件名
+        self.fileNameLabel = BodyLabel(task.fileName)           # 文件名
         self.progressBar = ProgressBar()                        # 任务进度条
         
         # 核心信息控件
         
-
 
         # 操作按钮
         self.openFolderButton = ToolButton(FluentIcon.FOLDER)     # 打开文件夹按钮
@@ -124,8 +123,8 @@ class ProgressingTaskCard(TaskCardBase):
         self.deleteButton.installEventFilter(ToolTipFilter(self.deleteButton))
 
         # 设置文件名样式
-        setFont(self.flieNameLabel, 18, QFont.Weight.Bold)
-        self.flieNameLabel.setWordWrap(True)
+        setFont(self.fileNameLabel, 18, QFont.Weight.Bold)
+        self.fileNameLabel.setWordWrap(True)
 
         self._initLayout()
         self._connectSignalToSlot()
@@ -183,7 +182,7 @@ class SuccessTaskCard(TaskCardBase):
         # 状态信息控件
         self.createTimeIcon = IconWidget(FluentIcon.DATE_TIME)  # 创建时间图标
         self.createTimeLabel = CaptionLabel(
-            task.createTime.toString("yyyy-MM-dd hh:mm:ss"))    # 创建时间
+            task.createTime.strftime("%Y-%m-%d %H:%M:%S"))    # 创建时间
         
 
         # 操作按钮（多一个重新开始）
@@ -201,12 +200,8 @@ class SuccessTaskCard(TaskCardBase):
         
 
         # 检查并更新封面
-        if self.task.coverPath.exists():
+        if hasattr(self.task, 'coverPath') and self.task.coverPath and Path(self.task.coverPath).exists():
             self.updateCover()
-
-    def updateCover(self):
-        self.imageLabel.setImage(str(self.task.coverPath))
-        self.imageLabel.setScaledSize(QSize(112, 63))
 
         self.restartButton.setToolTip(self.tr("重新开始"))
         self.restartButton.setToolTipDuration(3000)
@@ -223,7 +218,7 @@ class SuccessTaskCard(TaskCardBase):
         setFont(self.fileNameLabel, 18, QFont.Weight.Bold)
         self.fileNameLabel.setWordWrap(True)
 
-        if self.task.coverPath.exists():
+        if hasattr(self.task, 'coverPath') and self.task.coverPath and Path(self.task.coverPath).exists():
             self.updateCover()
 
         self._initLayout()
@@ -299,7 +294,7 @@ class FailedTaskCard(TaskCardBase):
 
         self.createTimeIcon = IconWidget(FluentIcon.DATE_TIME)
         self.createTimeLabel = CaptionLabel(
-            task.createTime.toString("yyyy-MM-dd hh:mm:ss"))
+            task.createTime.strftime("%Y-%m-%d %H:%M:%S"))
         
 
         self.restartButton = ToolButton(FluentIcon.UPDATE)
@@ -309,10 +304,10 @@ class FailedTaskCard(TaskCardBase):
         self._initWidget()
 
     def _initWidget(self):
-        self.imageLabel.setImage(QFileIconProvider().icon(
-            QFileInfo(self.task.videoPath)).pixmap(32, 32))
+        if hasattr(self.task, 'videoPath') and self.task.videoPath:
+            self.imageLabel.setImage(QFileIconProvider().icon(
+                QFileInfo(self.task.videoPath)).pixmap(32, 32))
         self.createTimeIcon.setFixedSize(16, 16)
-        self.sizeIcon.setFixedSize(16, 16)
 
         self.restartButton.setToolTip(self.tr("重新开始"))
         self.restartButton.setToolTipDuration(3000)
@@ -355,9 +350,6 @@ class FailedTaskCard(TaskCardBase):
         self.infoLayout.setSpacing(3)
         self.infoLayout.addWidget(self.createTimeIcon)
         self.infoLayout.addWidget(self.createTimeLabel, 0, Qt.AlignmentFlag.AlignLeft)
-        self.infoLayout.addSpacing(8)
-        self.infoLayout.addWidget(self.sizeIcon)
-        self.infoLayout.addWidget(self.sizeLabel, 0, Qt.AlignmentFlag.AlignLeft)
         self.infoLayout.addStretch(1)
 
     def _onLogButtonClicked(self):
@@ -377,5 +369,6 @@ class FailedTaskCard(TaskCardBase):
 
 
 
-class DeleteTaskDialog():
+class DeleteTaskDialog(MessageBoxBase):
+    """删除任务确认对话框"""
     pass

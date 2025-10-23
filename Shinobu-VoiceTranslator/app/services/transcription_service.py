@@ -22,6 +22,25 @@ from ..common.concurrent import Future, FutureFailed
 from ..common.config import cfg
 
 
+def get_ffmpeg_path() -> str:
+    """
+    获取 ffmpeg 可执行文件路径
+    
+    Returns:
+        ffmpeg 的完整路径
+    """
+    # 获取当前文件所在目录
+    current_dir = Path(__file__).parent.parent  # app 目录
+    ffmpeg_path = current_dir / 'common' / 'tools' / 'ffmpeg.exe'
+    
+    # 如果工具目录中的 ffmpeg 存在，使用它
+    if ffmpeg_path.exists():
+        return str(ffmpeg_path)
+    
+    # 否则尝试使用系统 PATH 中的 ffmpeg
+    return 'ffmpeg'
+
+
 class WhisperEngine:
     """Whisper 引擎类型"""
     GGML = "ggml"  # whisper.cpp
@@ -56,15 +75,16 @@ class TranscriptionService(BaseService):
         """检查服务依赖是否可用"""
         # 检查 ffmpeg 是否可用
         try:
-            subprocess.run(['ffmpeg', '-version'], 
+            ffmpeg_path = get_ffmpeg_path()
+            subprocess.run([ffmpeg_path, '-version'], 
                          capture_output=True, 
                          check=True,
                          creationflags=0x08000000 if sys.platform == 'win32' else 0)
             self._available = True
-            self._addLog("INFO", "听写服务已就绪")
-        except (subprocess.CalledProcessError, FileNotFoundError):
+            self._addLog("INFO", f"听写服务已就绪 (ffmpeg: {ffmpeg_path})")
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
             self._available = False
-            self._addLog("WARNING", "ffmpeg 未安装，听写服务不可用")
+            self._addLog("WARNING", f"ffmpeg 未找到，听写服务不可用 (错误: {e})")
     
     def isAvailable(self) -> bool:
         """检查服务是否可用"""
@@ -113,7 +133,7 @@ class TranscriptionService(BaseService):
             inputPath=str(input_file.absolute()),
             fileName=input_file.name,
             name=f"听写: {input_file.name}",
-            extraParams=kwargs
+            config=kwargs
         )
         
         # 保存到数据库
@@ -146,9 +166,9 @@ class TranscriptionService(BaseService):
             input_file = Path(task.inputPath)
             
             # 获取参数
-            whisper_model = task.extraParams.get('whisper_model', WhisperEngine.NONE)
-            language = task.extraParams.get('language', 'ja')
-            output_format = task.extraParams.get('output_format', OutputFormat.SRT_ORIGINAL)
+            whisper_model = task.config.get('whisper_model', WhisperEngine.NONE)
+            language = task.config.get('language', 'ja')
+            output_format = task.config.get('output_format', OutputFormat.SRT_ORIGINAL)
             
             # 如果是 SRT 文件，直接转换格式
             if input_file.suffix.lower() == '.srt':
@@ -215,8 +235,9 @@ class TranscriptionService(BaseService):
         """
         wav_file = input_file.with_suffix('.16k.wav')
         
+        ffmpeg_path = get_ffmpeg_path()
         cmd = [
-            'ffmpeg', '-y',
+            ffmpeg_path, '-y',
             '-i', str(input_file),
             '-acodec', 'pcm_s16le',
             '-ac', '1',
@@ -292,7 +313,7 @@ class TranscriptionService(BaseService):
     def _prepare_whisper_cpp_command(self, model: str, wav_file: Path, 
                                      language: str, task: Task) -> list:
         """准备 whisper.cpp 命令"""
-        params = task.extraParams.get('whisper_params', '')
+        params = task.config.get('whisper_params', '')
         
         # 基础命令
         cmd = [
@@ -312,14 +333,21 @@ class TranscriptionService(BaseService):
     def _prepare_faster_whisper_command(self, model: str, wav_file: Path,
                                        language: str, task: Task) -> list:
         """准备 faster-whisper 命令"""
-        params = task.extraParams.get('faster_whisper_params', '')
+        params = task.config.get('faster_whisper_params', '')
         model_name = model.replace('faster-whisper-', '')
+        
+        # 获取转录脚本路径
+        current_dir = Path(__file__).parent.parent  # app 目录
+        transcribe_script = current_dir / 'common' / 'models' / 'whisper-faster' / 'transcribe.py'
+        
+        # 模型路径（默认为本地模型目录）
+        model_dir = current_dir / 'common' / 'models' / 'whisper-faster'
         
         # 基础命令
         cmd = [
-            'python',
-            'whisper-faster/transcribe.py',
-            '--model', model_name,
+            sys.executable,  # 使用当前 Python 解释器
+            str(transcribe_script),
+            '--model', str(model_dir),  # 使用本地模型路径
             '--language', language,
             '--input', str(wav_file.with_suffix('')),
             '--output_dir', str(wav_file.parent)
@@ -347,7 +375,7 @@ class TranscriptionService(BaseService):
         input_file = Path(task.inputPath)
         
         # 获取时间戳设置（默认为 True）
-        include_timestamp = task.extraParams.get('include_timestamp', True)
+        include_timestamp = task.config.get('include_timestamp', True)
         
         # 原文格式处理
         if output_format == OutputFormat.SRT_ORIGINAL:
@@ -379,7 +407,7 @@ class TranscriptionService(BaseService):
         # 双语格式处理（需要翻译文件）
         elif output_format == OutputFormat.SRT_BILINGUAL:
             # 双语 SRT（始终包含时间戳）
-            translated_srt = task.extraParams.get('translated_srt')
+            translated_srt = task.config.get('translated_srt')
             if not translated_srt or not Path(translated_srt).exists():
                 self._addLog("WARNING", "未找到翻译文件，仅输出原文")
                 return self._generate_output(srt_file, OutputFormat.SRT_ORIGINAL, task)
@@ -390,7 +418,7 @@ class TranscriptionService(BaseService):
         
         elif output_format == OutputFormat.TXT_BILINGUAL:
             # 双语 TXT
-            translated_srt = task.extraParams.get('translated_srt')
+            translated_srt = task.config.get('translated_srt')
             if not translated_srt or not Path(translated_srt).exists():
                 self._addLog("WARNING", "未找到翻译文件，仅输出原文")
                 return self._generate_output(srt_file, OutputFormat.TXT_ORIGINAL, task)
@@ -402,7 +430,7 @@ class TranscriptionService(BaseService):
         
         elif output_format == OutputFormat.XLSX_BILINGUAL:
             # 双语 XLSX
-            translated_srt = task.extraParams.get('translated_srt')
+            translated_srt = task.config.get('translated_srt')
             if not translated_srt or not Path(translated_srt).exists():
                 self._addLog("WARNING", "未找到翻译文件，仅输出原文")
                 return self._generate_output(srt_file, OutputFormat.XLSX_ORIGINAL, task)
@@ -428,7 +456,7 @@ class TranscriptionService(BaseService):
         Returns:
             结果字典
         """
-        output_format = task.extraParams.get('output_format', OutputFormat.SRT_ORIGINAL)
+        output_format = task.config.get('output_format', OutputFormat.SRT_ORIGINAL)
         
         output_path = self._generate_output(srt_file, output_format, task)
         
@@ -623,7 +651,7 @@ class TranscriptionService(BaseService):
             task.progress = 100.0
             
             # 保存额外信息
-            task.extraParams['srt_path'] = result.get('srt_path')
+            task.config['srt_path'] = result.get('srt_path')
             
             self._onWorkerFinished(task, True, "听写完成")
         else:

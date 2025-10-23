@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from .base_download_service import BaseDownloadService, DownloadWorker
+from .base_download_service import BaseDownloadService
 from ...common.database.entity.task import Task, TaskStatus, TaskType
 from ...common.config import cfg
 from ...common.concurrent import Future, FutureFailed
@@ -165,7 +165,7 @@ class BilibiliService(BaseDownloadService):
             url=video_id,
             source="bilibili",
             fileName=f"{video_id}.mp4",
-            extraParams=kwargs
+            config=kwargs
         )
         
         # 保存到数据库

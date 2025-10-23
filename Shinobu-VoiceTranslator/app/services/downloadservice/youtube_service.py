@@ -107,7 +107,7 @@ class YouTubeService(BaseDownloadService):
             url=url,
             source="youtube",
             fileName=f"{video_id}.mp4",
-            extraParams=kwargs
+            config=kwargs
         )
         
         self.db.save_task(task)
@@ -138,7 +138,7 @@ class YouTubeService(BaseDownloadService):
             # 执行下载
             output_path = self.downloader.download(
                 task.url, 
-                proxy=task.extraParams.get('proxy'),
+                proxy=task.config.get('proxy'),
                 status_callback=status_callback
             )
             return output_path
