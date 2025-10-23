@@ -5,9 +5,10 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from .base_download_service import BaseDownloadService, DownloadWorker
+from .base_download_service import BaseDownloadService
 from ...common.database.entity import Task, TaskStatus, TaskType
 from ...common.config import cfg
+from ...common.concurrent import Future, FutureFailed
 
 
 class YouTubeDownloader:
@@ -89,7 +90,7 @@ class YouTubeDownloader:
 
 
 class YouTubeService(BaseDownloadService):
-    """YouTube下载服务"""
+    """YouTube下载服务 - 使用 TaskExecutor"""
     
     def __init__(self):
         super().__init__()
@@ -116,22 +117,54 @@ class YouTubeService(BaseDownloadService):
         return task
     
     def start(self, task: Task) -> bool:
-        """开始下载任务"""
-        if task.id in self.workers:
+        """使用 TaskExecutor 开始下载任务"""
+        if task.id in self.futures:
             self._addLog("WARNING", f"任务已在运行: {task.fileName}")
             return False
         
         task.status = TaskStatus.RUNNING
         task.startTime = datetime.now()
         self.db.save_task(task)
+        self._emit_task_updated(task)
         
-        worker = DownloadWorker(task, self.downloader)
-        worker.progressChanged.connect(lambda p, s, e: self._onWorkerProgress(task, p, s, e))
-        worker.finished.connect(lambda success, msg: self._onWorkerFinished(task, success, msg))
-        worker.logGenerated.connect(self._addLog)
+        # 定义下载任务函数
+        def download_task():
+            """在线程池中执行的下载函数"""
+            # 创建状态回调函数
+            def status_callback(message: str):
+                # Signal-Slot 机制会自动切换到主线程
+                self._addLog("INFO", message)
+            
+            # 执行下载
+            output_path = self.downloader.download(
+                task.url, 
+                proxy=task.extraParams.get('proxy'),
+                status_callback=status_callback
+            )
+            return output_path
         
-        self.workers[task.id] = worker
-        worker.start()
+        # 使用 TaskExecutor 异步执行
+        future = self.asyncRun(download_task)
+        
+        # 绑定成功回调 - 会在主线程中执行
+        future.result.connect(lambda output_path: self._onDownloadSuccess(task, output_path))
+        
+        # 绑定失败回调 - 会在主线程中执行
+        future.failed.connect(lambda error: self._onDownloadFailed(task, error))
+        
+        # 保存 Future 引用
+        self.futures[task.id] = future
         
         self._addLog("INFO", f"开始下载YouTube视频: {task.url}")
         return True
+    
+    def _onDownloadSuccess(self, task: Task, output_path: str):
+        """下载成功的回调 - 在主线程中执行"""
+        task.outputPath = output_path
+        task.progress = 100.0
+        self._onWorkerFinished(task, True, "下载完成")
+    
+    def _onDownloadFailed(self, task: Task, error: FutureFailed):
+        """下载失败的回调 - 在主线程中执行"""
+        error_msg = str(error.exception) if hasattr(error, 'exception') else str(error)
+        self._onWorkerFinished(task, False, error_msg)
