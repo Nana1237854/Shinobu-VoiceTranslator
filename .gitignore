@@ -3,6 +3,26 @@
 .VSCodeCounter
 
 # 忽略python缓存文件
-*/__pycache__
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 忽略数据文件夹
 data/
 AppData/
+
+# 忽略模型文件
+faster-whisper*/
+
+# 忽略models文件夹下的模型文件
+**/models/llama/*.dll
+**/models/llama/*.exe
+**/models/whisper/**/*.bin
+**/models/whisper-faster/*.bin
+**/models/whisper-faster/*.json
+**/models/whisper-faster/model.bin
+**/models/whisper-faster/tokenizer.json
+**/models/whisper-faster/vocabulary.txt
+**/models/uvr/
+**/models/GalTransl/**/*.json
