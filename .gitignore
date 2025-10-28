@@ -15,12 +15,13 @@ AppData/
 # 忽略日志文件
 *.log
 
+
 # 忽略环境配置文件
 .env
 .env.*
 
 # 忽略虚拟环境文件夹
-venv/
+venv310/
 
 
 # 忽略模型文件
@@ -29,11 +30,7 @@ faster-whisper*/
 # 忽略models文件夹下的模型文件
 **/models/llama/*.dll
 **/models/llama/*.exe
-**/models/whisper/**/*.bin
-**/models/whisper-faster/*.bin
-**/models/whisper-faster/*.json
-**/models/whisper-faster/model.bin
-**/models/whisper-faster/tokenizer.json
-**/models/whisper-faster/vocabulary.txt
-**/models/uvr/
+**/models/whisper
+**/models/whisper-faster
+**/models/uvr
 **/models/GalTransl/**/*.json
