@@ -1,6 +1,7 @@
 # coding:utf-8
 import sys
 from enum import Enum
+from pathlib import Path
 
 from PySide6.QtCore import QLocale, QStandardPaths
 from qfluentwidgets import (qconfig, QConfig, ConfigItem, OptionsConfigItem, BoolValidator,

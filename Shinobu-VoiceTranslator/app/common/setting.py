@@ -16,3 +16,6 @@ DOC_URL = "https://qfluentwidgets.com/"
 
 CONFIG_FOLDER = Path('AppData').absolute()
 CONFIG_FILE = CONFIG_FOLDER / "config.json"
+
+# 日志文件路径
+LOG_PATH = Path('log.txt').absolute()
