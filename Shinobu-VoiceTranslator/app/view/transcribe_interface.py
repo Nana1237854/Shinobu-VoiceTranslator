@@ -91,7 +91,7 @@ class TranscribeInterface(ScrollArea):
         if folder_path:
             cfg.set(cfg.saveFolder, folder_path)
             # 更新配置卡中显示的路径
-            self.transcribeConfigCard.groups[4].contentLabel.setText(folder_path)
+            self.transcribeConfigCard.saveFolderGroup.contentLabel.setText(folder_path)
             
             InfoBar.success(
                 self.tr("保存目录已更新"),
@@ -126,12 +126,6 @@ class TranscribeInterface(ScrollArea):
             return
         
         # 3. 获取配置参数
-        # 听写模型映射
-        model_map = {
-            "whisper": "ggml-medium.bin",  # 默认使用 medium 模型
-            "whisper-faster(仅限N卡)": "faster-whisper-medium"
-        }
-        
         # 语言映射
         language_map = {
             "中文": "zh",
@@ -143,12 +137,16 @@ class TranscribeInterface(ScrollArea):
         }
         
         # 获取选择的值
-        model_text = self.transcribeConfigCard.transcribeModelComboBox.currentText()
+        # 使用 getSelectedModel() 获取实际的模型名称
+        whisper_model = self.transcribeConfigCard.getSelectedModel()
         language_text = self.transcribeConfigCard.inputLanguageComboBox.currentText()
         output_format = self.transcribeConfigCard.outputFileTypeComBox.currentText()
         
-        whisper_model = model_map.get(model_text, "ggml-medium.bin")
         language = language_map.get(language_text, "ja")
+        
+        print(f"[听写任务] 选择的模型: {whisper_model}")
+        print(f"[听写任务] 输入语言: {language}")
+        print(f"[听写任务] 输出格式: {output_format}")
         
         # 4. 创建听写任务
         task = transcriptionService.createTask(

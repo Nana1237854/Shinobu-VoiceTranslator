@@ -1,6 +1,7 @@
 # coding:utf-8
+import os
 from typing import Dict, List
-from PySide6.QtCore import Qt, Signal, Property, QSize
+from PySide6.QtCore import Qt, Signal, Property, QSize, QDateTime
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QWidget, QStackedWidget, QVBoxLayout, QGraphicsDropShadowEffect
 
@@ -18,6 +19,10 @@ from ..services.translation_service import translationService
 from ..services.transcription_service import transcriptionService
 from ..common.database import sqlRequest
 from ..components.empty_status_widget import EmptyStatusWidget
+from ..common.setting import LOG_PATH
+
+from PySide6.QtCore import QTimer
+
 
 
 
@@ -415,18 +420,21 @@ class LogTaskView(QWidget):
         self.logContent = PlainTextEdit(self)
         self.clearButton = PushButton(self.tr("清空日志"), self)
 
+        # 日志文件读取相关
+        self.timer = None
+        self.last_read_position = 0
+        self.file_not_found_message_shown = False
+        self.LOG_PATH = LOG_PATH  # 从 setting.py 导入的路径
+
         self.__initWidgets()
         self.__initLayout()
         self._connectSignalToSlot()
+        self._setup_timer()  # 初始化定时器
 
     def __initWidgets(self):
         self.logContent.setReadOnly(True)
-        # 可以设置一些样式，例如等宽字体
-        setFont(self.logContent, 10)
+        setFont(self.logContent, 15)
         self.titleLabel.setObjectName("logTitleLabel")
-
-        # 模拟添加一些日志
-        self.addLog("INFO", "日志系统初始化完成。")
 
     def __initLayout(self):
         from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout
@@ -442,48 +450,126 @@ class LogTaskView(QWidget):
         self.setLayout(layout)
 
     def _connectSignalToSlot(self):
-        self.clearButton.clicked.connect(self.logContent.clear)
-        signalBus.logGenerated.connect(self.addLog)
+        self.clearButton.clicked.connect(self._clear_log_file)
 
-    def addLog(self, service_type=None, level: str = None, message: str = None):
-        """向日志视图添加一条格式化的日志
+    def _setup_timer(self):
+        """设置定时器，每秒读取一次日志文件"""
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._read_log_file)
+        self.timer.start(1000)  # 每秒读取一次
         
-        Args:
-            service_type: 服务类型（TaskType 枚举），可选
-            level: 日志级别（INFO, WARNING, ERROR 等）
-            message: 日志消息
+        # 初始读取位置
+        self.last_read_position = 0
+        self.file_not_found_message_shown = False
         
-        Note:
-            支持两种调用方式：
-            1. addLog(service_type, level, message) - 从信号连接调用（3参数）
-            2. addLog(level, message) - 直接调用（2参数）
-        """
-        from PySide6.QtCore import QDateTime
-        
-        # 处理参数兼容性：检测是2参数还是3参数调用
-        if message is None and level is not None:
-            # 两参数调用：addLog(level, message)
-            message = level
-            level = service_type
-            service_type = None
-        
-        time_str = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
-        
-        # 获取服务类型名称（如果提供）
-        if service_type and hasattr(service_type, 'value'):
-            service_name = service_type.value.upper()
-            formatted_message = f"[{time_str}] [{service_name}] [{level.upper()}]: {message}"
-        else:
-            formatted_message = f"[{time_str}] [{level.upper()}]: {message}"
-        
-        self.logContent.appendPlainText(formatted_message)
-        # 滚动到底部
-        self.logContent.verticalScrollBar().setValue(
-            self.logContent.verticalScrollBar().maximum()
-        )
+        # 立即读取一次日志
+        self._read_log_file()
 
-        
-    
+    def _read_log_file(self):
+        """读取日志文件并更新显示（增量读取）"""
+        try:
+            # 检查文件是否存在
+            if not os.path.exists(self.LOG_PATH):
+                if not self.file_not_found_message_shown:
+                    timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                    self.logContent.setPlainText(
+                        f"[{timestamp}] 错误: 日志文件 '{self.LOG_PATH}' 未找到。\n"
+                        f"正在等待文件创建...\n"
+                    )
+                    self.file_not_found_message_shown = True
+                self.last_read_position = 0  # 如果文件消失了，重置读取位置
+                return
+
+            # 如果文件之前未找到但现在找到了
+            if self.file_not_found_message_shown:
+                self.logContent.clear()  # 清除之前的错误信息
+                self.file_not_found_message_shown = False
+                self.last_read_position = 0  # 从头开始读
+
+            with open(self.LOG_PATH, 'r', encoding='utf-8', errors='replace') as f:
+                # 检查文件是否被截断或替换 (例如日志轮转)
+                current_file_size = f.seek(0, os.SEEK_END)
+                
+                if current_file_size < self.last_read_position:
+                    # 文件变小了，意味着文件被截断或替换了
+                    timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                    self.logContent.appendPlainText(
+                        f"\n[{timestamp}] 检测到日志文件截断或轮转。从头开始读取...\n"
+                    )
+                    self.last_read_position = 0
+
+                # 从上次读取位置开始读取
+                f.seek(self.last_read_position)
+                new_content = f.read()
+                
+                if new_content:
+                    # 移除末尾的换行符，appendPlainText 会自动添加
+                    self.logContent.appendPlainText(new_content.rstrip())
+                    
+                    # 自动滚动到底部
+                    scrollbar = self.logContent.verticalScrollBar()
+                    scrollbar.setValue(scrollbar.maximum())
+
+                # 更新下次读取的起始位置
+                self.last_read_position = f.tell()
+
+        except FileNotFoundError:
+            if not self.file_not_found_message_shown:
+                timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                self.logContent.setPlainText(
+                    f"[{timestamp}] 错误: 日志文件 '{self.LOG_PATH}' 再次检查时未找到。\n"
+                )
+                self.file_not_found_message_shown = True
+            self.last_read_position = 0
+            
+        except IOError as e:
+            timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+            self.logContent.appendPlainText(f"[{timestamp}] 读取日志文件IO错误: {e}\n")
+            
+        except Exception as e:
+            timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+            self.logContent.appendPlainText(f"[{timestamp}] 读取日志文件时发生未知错误: {e}\n")
+
+    def _clear_log_file(self):
+        """清空日志文件和显示"""
+        try:
+            # 清空显示
+            self.logContent.clear()
+            
+            # 清空日志文件
+            if os.path.exists(self.LOG_PATH):
+                with open(self.LOG_PATH, 'w', encoding='utf-8') as f:
+                    timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+                    f.write(f"[{timestamp}] 日志已清空\n")
+                
+                # 重置读取位置
+                self.last_read_position = 0
+                
+                # 立即读取新内容
+                self._read_log_file()
+        except Exception as e:
+            print(f"清空日志文件时出错: {e}")
+
+    def showEvent(self, event):
+        """当视图显示时，确保定时器运行并立即读取最新日志"""
+        super().showEvent(event)
+        if self.timer and not self.timer.isActive():
+            self.timer.start(1000)
+        self._read_log_file()
+
+    def hideEvent(self, event):
+        """当视图隐藏时，可以选择停止定时器以节省资源"""
+        super().hideEvent(event)
+        # 可选：停止定时器以节省资源
+        # if self.timer:
+        #     self.timer.stop()
+
+    def closeEvent(self, event):
+        """确保在关闭窗口时停止定时器"""
+        if self.timer:
+            self.timer.stop()
+        event.accept()
+
 
 class TaskCommandBarView(CommandBarView):
     def __init__(self, parent=None):

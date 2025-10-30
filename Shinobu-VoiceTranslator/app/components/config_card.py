@@ -180,7 +180,10 @@ class TranscribeConfigCard(GroupHeaderCardWidget):
         self.targetFileButton.setFixedWidth(120)
         self.transcribeModelComboBox.setFixedWidth(320)
         self.inputLanguageComboBox.setFixedWidth(320)
-        self.transcribeModelComboBox.addItems(["whisper", "whisper-faster(仅限N卡)"])
+        
+        # 动态加载 Whisper 模型列表
+        self._loadWhisperModels()
+        
         self.inputLanguageComboBox.addItems(["中文", "日语", "英语", "韩语", "俄语", "法语"])
         self.outputFileTypeComBox.addItems(
             ["原文SRT", "双语SRT", "原文LRC", "原文TXT", 
@@ -188,6 +191,56 @@ class TranscribeConfigCard(GroupHeaderCardWidget):
             )
 
         self._initLayout()
+    
+    def _loadWhisperModels(self):
+        """加载可用的 Whisper 模型到下拉菜单"""
+        from ..services.transcription_service import transcriptionService
+        
+        # 获取可用模型列表
+        available_models = transcriptionService.get_available_models()
+        
+        # 添加基础选项
+        model_items = []
+        
+        # 如果有扫描到的模型，添加到列表
+        if available_models:
+            print(f"[UI] 加载 {len(available_models)} 个可用模型到下拉菜单")
+            for model in available_models:
+                # 生成用户友好的显示名称
+                if model.startswith('faster-whisper-'):
+                    display_name = f"Faster-Whisper ({model[15:]})"
+                else:
+                    display_name = model
+                model_items.append(display_name)
+        
+        # 如果没有扫描到模型，添加默认选项
+        if not model_items:
+            model_items = ["whisper", "whisper-faster(仅限N卡)"]
+            print("[UI] 未扫描到模型，使用默认选项")
+        
+        self.transcribeModelComboBox.addItems(model_items)
+        
+        # 保存模型映射关系（显示名称 -> 实际模型名）
+        self._model_name_map = {}
+        if available_models:
+            for model, display in zip(available_models, model_items):
+                self._model_name_map[display] = model
+    
+    def getSelectedModel(self) -> str:
+        """
+        获取用户选择的模型名称（实际模型名，非显示名）
+        
+        Returns:
+            模型名称
+        """
+        display_name = self.transcribeModelComboBox.currentText()
+        
+        # 如果有映射关系，返回实际模型名
+        if hasattr(self, '_model_name_map') and display_name in self._model_name_map:
+            return self._model_name_map[display_name]
+        
+        # 否则返回显示名
+        return display_name
 
     
     def _initLayout(self):
@@ -216,9 +269,9 @@ class TranscribeConfigCard(GroupHeaderCardWidget):
             content=self.tr("选择输出的文件"),
             widget=self.outputFileTypeComBox
         )
-        self.addGroup(
+        self.saveFolderGroup = self.addGroup(
             icon=FluentIcon.FOLDER,
-            title=self.tr("保存目录"),
+            title=self.tr("Save Folder"),
             content=cfg.get(cfg.saveFolder),
             widget=self.saveFolderButton
         )

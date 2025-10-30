@@ -13,8 +13,10 @@ data/
 AppData/
 
 # 忽略日志文件
-*.log
+log.txt
 
+# 忽略工具文件
+tools/
 
 # 忽略环境配置文件
 .env
